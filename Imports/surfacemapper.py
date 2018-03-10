@@ -2,7 +2,6 @@ import math
 from PIL import Image
 from colour import Color
 import matplotlib.pyplot as plt
-import random
 import numpy as np
 
 def is_day(time):
@@ -14,19 +13,38 @@ def get_theta(time):
 def get_temperature(time):
     return 280*math.cos(get_theta(time))**0.25 + 100.
 
-def get_solar_flux(nsw, vsw, time):
+def get_total_particles(time, cme):
+    total_particles = np.random.randint(int(4E+3), int(5E+3))
+    if cme:
+        total_particles *= 10
     if not is_day(time):
-        nsw /= 500
-        vsw /= 500
+        total_particles /= 5.
+    return total_particles
+
+def get_velocity(time, cme):
+    v = (np.random.random()*100) % 4
+    if v < 3:
+        v += 3.
+    v *= 1E+5
+    if cme:
+        v *= 2
+    if not is_day(time):
+        v /= 5.
+    velocity.append(v)
+    return v
+
+def get_solar_flux(time, cme):
+    nsw = get_total_particles(time, cme)
+    vsw = get_velocity(time, cme)
     return nsw*vsw*math.cos(get_theta(time))
 
-def generate_graphs(nsw, vsw):
+def generate_graphs():
     val1 = []
     val2 = []
     t = range(0, 25)
     for time in t:
         temp = get_temperature(time)
-        sf = get_solar_flux(nsw, vsw, time)
+        sf = get_solar_flux(time, False)
         val1.append(temp)
         val2.append(sf)
 
@@ -62,23 +80,37 @@ def colorize(img, time):
     return img
 
 def generate_surface(size):
-    t = range(0, 24)
+    t = range(24)
     for time in t:
         img = Image.new('RGB', size)
         colorize(img, time).save('T'+str(time)+'.png')
 
-def generate_swf(nsw, vsw):
+def generate_swf(cme = False):
     swf = []
-    for time in range(0, 24):
-        swf.append(get_solar_flux(nsw, vsw, time))
+    t = range(24)
+    for time in t:
+        swf.append(get_solar_flux(time, cme))
+    plt.subplot(121)
+    plt.plot(t, swf)
+    plt.title("SWF")
+    plt.xlabel("Hr")
+    plt.ylabel("swf (/m^2)")
+    plt.subplot(122)
+    plt.plot(t, velocity)
+    plt.title("Velocity")
+    plt.xlabel("Hr")
+    plt.ylabel("V (m/s)")
+    plt.show()
     return swf
 
 def generate_ae_grid(size):
     mat = []
     for i in range(size[0]):
+        ae= np.random.normal(0, 1, size[1])
         row = []
-        for j in range(size[1]):
-            row.append(random.random())
+        for a in ae:
+            a = np.abs(a)
+            row.append(a)
         mat.append(row)
     return np.matrix(mat)
 
@@ -86,11 +118,13 @@ def generate_to_grid(size):
     mat = []
     for i in range(size[0]):
         row = []
-        for j in range(size[1]):
-            row.append(random.random()/10.)
+        to = np.random.normal(0,1, size[1])
+        for t in to:
+            t = np.abs(t)/10.
+            row.append(t)
         mat.append(row)
     return np.matrix(mat)
 
-
+velocity = []
 COLOR = get_colors()
 
