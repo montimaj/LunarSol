@@ -12,7 +12,7 @@ def get_temperature(time):
     return 280*math.cos(get_theta(time))**0.25 + 100.
 
 def get_total_particles(time, cme):
-    total_particles = np.random.randint(int(4E+6), int(5E+6))
+    total_particles = np.random.randint(MIN_PARTICLES, MAX_PARTICLES)
     if cme:
         total_particles *= 10
     if not is_day(time):
@@ -52,9 +52,11 @@ def generate_omat_grid(size, mean, sd):
 def generate_to_grid(size, mean, sd):
     mat = []
     for i in range(size[0]):
-        to = np.random.normal(mean,sd, size[1])
+        to = np.random.normal(mean, sd, size[1])
         mat.append(to)
     mat = np.matrix(mat)
     mat_to_image(mat, 'TiO2.png')
     return mat
 
+MIN_PARTICLES = int(4E+6)
+MAX_PARTICLES = int(5E+6)
