@@ -7,10 +7,10 @@ from collections import defaultdict
 
 class SurfaceImplantation():
 
-    def __init__(self, omat, to, swf, days):
+    def __init__(self, omat, to, days):
         self.__omat = omat
+        self.__solar_wind_flux = {}
         self.__titanium_oxide = to
-        self.__solar_wind_flux = swf
         self.__hrefgrid = self.generate_empty_matrix(np.shape(omat))
         self.__trefgrid = self.generate_empty_matrix(np.shape(omat))
         self.__heliumrefgrid = self.generate_empty_matrix(np.shape(omat))
@@ -57,9 +57,9 @@ class SurfaceImplantation():
         return 'NIGHT'
 
     def qualify_swf(self, swf):
-        if swf < 0.2:
+        if swf < 3:
             return 'LOW'
-        elif swf > 0.6:
+        elif swf > 6:
             return 'HIGH'
         return 'MEDIUM'
 
@@ -143,7 +143,7 @@ class SurfaceImplantation():
                     while particles:
                         qomat = self.qualify_omat(omat[i, j])
                         qto = self.qualify_to(to[i, j])
-                        qswf = self.qualify_swf(swf[0, time[1]])
+                        qswf = self.qualify_swf(swf[time[1]])
                         if qomat == 'HIGH' and qto == 'HIGH' and qswf == 'HIGH':
                             self.__helium_particles_retained[time] += 1
                             self.__heliumretgrid[i, j] += 1
@@ -156,6 +156,8 @@ class SurfaceImplantation():
     def get_particle_proportions(self, time):
         cme = self.__cme
         total_particles = sm.get_total_particles(time, cme)
+        velocity = sm.get_velocity(cme)
+        self.__solar_wind_flux[time] = sm.get_solar_flux(total_particles, velocity, time) % 10
         if not cme:
             numh = round(0.95 * total_particles)
             numhe = (random.random() * 100) % 4
