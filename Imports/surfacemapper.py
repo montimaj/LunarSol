@@ -14,28 +14,26 @@ def get_temperature(time):
     return 280*math.cos(get_theta(time))**0.25 + 100.
 
 def get_total_particles(time, cme):
-    total_particles = np.random.randint(int(4E+3), int(5E+3))
+    total_particles = np.random.randint(int(4E+6), int(5E+6))
     if cme:
         total_particles *= 10
     if not is_day(time):
-        total_particles /= 5.
+        total_particles /= 500.
     return total_particles
 
-def get_velocity(time, cme):
+def get_velocity(cme):
     v = (np.random.random()*100) % 4
     if v < 3:
         v += 3.
     v *= 1E+5
     if cme:
         v *= 2
-    if not is_day(time):
-        v /= 5.
     velocity.append(v)
     return v
 
 def get_solar_flux(time, cme):
     nsw = get_total_particles(time, cme)
-    vsw = get_velocity(time, cme)
+    vsw = get_velocity(cme)
     return nsw*vsw*math.cos(get_theta(time))
 
 def generate_graphs():
@@ -89,7 +87,9 @@ def generate_swf(cme = False):
     swf = []
     t = range(24)
     for time in t:
-        swf.append(get_solar_flux(time, cme))
+        sf = get_solar_flux(time, cme)
+        swf.append(sf)
+    '''
     plt.subplot(121)
     plt.plot(t, swf)
     plt.title("SWF")
@@ -101,29 +101,38 @@ def generate_swf(cme = False):
     plt.xlabel("Hr")
     plt.ylabel("V (m/s)")
     plt.show()
+    '''
+    swf = np.matrix(swf)
+    swf /= np.max(swf)
+    print(swf)
     return swf
 
-def generate_ae_grid(size):
-    mat = []
-    for i in range(size[0]):
-        ae= np.random.normal(0, 1, size[1])
-        row = []
-        for a in ae:
-            a = np.abs(a)
-            row.append(a)
-        mat.append(row)
-    return np.matrix(mat)
+def mat_to_image(mat, imgname):
+    rows, cols = np.shape(mat)
+    outimg = Image.new('L', (cols, rows))
+    for i in range(rows):
+        for j in range(cols):
+            val = int((mat[i, j] / np.max(mat)) * 255)
+            outimg.putpixel((j,i), (val,))
+    outimg.save(imgname)
 
-def generate_to_grid(size):
+def generate_omat_grid(size, mean, sd):
     mat = []
     for i in range(size[0]):
-        row = []
-        to = np.random.normal(0,1, size[1])
-        for t in to:
-            t = np.abs(t)/10.
-            row.append(t)
-        mat.append(row)
-    return np.matrix(mat)
+        omat = np.random.normal(mean, sd, size[1])
+        mat.append(omat)
+    mat = np.matrix(mat)
+    mat_to_image(mat, 'OMAT.png')
+    return mat
+
+def generate_to_grid(size, mean, sd):
+    mat = []
+    for i in range(size[0]):
+        to = np.random.normal(mean,sd, size[1])
+        mat.append(to)
+    mat = np.matrix(mat)
+    mat_to_image(mat, 'TiO2.png')
+    return mat
 
 velocity = []
 COLOR = get_colors()

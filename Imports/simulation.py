@@ -1,21 +1,24 @@
-from PIL import Image
 import numpy as np
 import random
 from Imports import surfacemapper as sm
 import matplotlib.pyplot as plt
 from threading import Thread
+from collections import defaultdict
 
 class SurfaceImplantation():
 
-    def __init__(self, ae, to, swf, cme, running_time_hrs):
-        self.__activation_energy = ae
+    def __init__(self, omat, to, swf, days):
+        self.__omat = omat
         self.__titanium_oxide = to
         self.__solar_wind_flux = swf
-        self.__hgrid = Image.new('L', np.shape(ae))
-        self.__tgrid = Image.new('L', np.shape(ae))
-        self.__heliumgrid = Image.new('L', np.shape(ae))
-        self.__running_time = running_time_hrs
-        self.__cme = cme
+        self.__hrefgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__trefgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__heliumrefgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__hretgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__tretgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__heliumretgrid = self.generate_empty_matrix(np.shape(omat))
+        self.__logrid = self.generate_empty_matrix(np.shape(omat))
+        self.__days = days
         self.__lunar_oxygen = {}
         self.__hydrogen_particles_reflected = {}
         self.__helium_particles_reflected = {}
@@ -23,18 +26,28 @@ class SurfaceImplantation():
         self.__hydrogen_particles_retained = {}
         self.__helium_particles_retained = {}
         self.__trace_particles_retained = {}
+        self.__hydrogen_ref_low = 0
+        self.__hydrogen_ref_med = 0
+        self.__hydrogen_ret_high = 0
+        self.__hydrogen_ret_med = 0
 
-    def qualify_activation_energy(self, ae):
-        if ae < 0.2:
+    def generate_empty_matrix(self, size):
+        mat = []
+        for i in range(size[0]):
+            mat.append([0] * size[1])
+        return np.matrix(mat)
+
+    def qualify_omat(self, omat):
+        if omat < 0.93:
             return 'LOW'
-        elif ae > 0.9:
+        elif omat > 0.96:
             return 'HIGH'
         return 'MEDIUM'
 
     def qualify_to(self, to):
-        if to < 0.008:
+        if to < 10:
             return 'LOW'
-        elif to > 0.06:
+        elif to > 15:
             return 'HIGH'
         return 'MEDIUM'
 
@@ -44,103 +57,99 @@ class SurfaceImplantation():
         return 'NIGHT'
 
     def qualify_swf(self, swf):
-        if swf < 0.3:
+        if swf < 0.2:
             return 'LOW'
-        elif swf > 0.7:
+        elif swf > 0.6:
             return 'HIGH'
         return 'MEDIUM'
 
-    def lunar_oxygen(self, time):
-        self.__hydrogen_particles_retained[time] -= 1
-        self.__lunar_oxygen[time] += 1
+    def lunar_oxygen(self, time, solar_blackout = False):
+        if not solar_blackout:
+            self.__hydrogen_particles_retained[time] -= 1
+            self.__lunar_oxygen[time] += 1
+        else:
+            self.__lunar_oxygen[time] += np.random.randint(200, 500)
 
-    def hydrotrace_implantation(self, time, grid, num_particles, is_hydrogen = True):
-        ae = self.__activation_energy
+    def hydrotrace_implantation(self, time, refgrid, retgrid, num_particles, is_hydrogen = True):
+        omat = self.__omat
         to = self.__titanium_oxide
-        cols, rows = np.shape(ae)
+        rows, cols = np.shape(omat)
         for i in range(rows):
             for j in range(cols):
                 particles = num_particles
                 while particles:
-                    pos = (j, i)
-                    qae = self.qualify_activation_energy(ae[i, j])
-                    if qae == 'LOW':
+                    qomat = self.qualify_omat(omat[i, j])
+                    if qomat == 'LOW':
                         if is_hydrogen:
                             self.__hydrogen_particles_reflected[time] += 1
+                            self.__hydrogen_ref_low += 1
                         else:
                             self.__trace_particles_reflected[time] +=1
-                        self.__hgrid.putpixel(pos, (random.randint(200, 255),))
-                    elif qae == 'HIGH':
+                        refgrid[i, j] += 1
+                    elif qomat == 'HIGH':
                         if is_hydrogen:
                             self.__hydrogen_particles_retained[time] += 1
+                            self.__hydrogen_ret_high += 1
                         else:
                             self.__trace_particles_retained[time] += 1
-                        grid.putpixel(pos, (random.randint(0, 50),))
+                        retgrid[i, j] += 1
                         if is_hydrogen:
                             qto = self.qualify_to(to[i, j])
                             if qto == 'HIGH':
+                                self.__logrid[i,j] += 1
                                 self.lunar_oxygen(time)
                     else:
-                        qst = self.qualify_surface_temp(time)
-                        if (is_hydrogen):
-                            self.__hydrogen_particles_reflected[time] += 1
-                        else:
-                            self.__trace_particles_reflected[time] += 1
+                        qst = self.qualify_surface_temp(time[1])
                         if qst == 'DAY':
-                            if time == 12:
-                                grid.putpixel(pos, (255,))
+                            if (is_hydrogen):
+                                self.__hydrogen_particles_reflected[time] += 1
+                                self.__hydrogen_ref_med += 1
                             else:
-                                grid.putpixel(pos, (random.randint(150, 200),))
+                                self.__trace_particles_reflected[time] += 1
+                            refgrid[i, j] += 1
                         else:
                             if (is_hydrogen):
                                 self.__hydrogen_particles_retained[time] += 1
+                                self.__hydrogen_ret_med += 1
                             else:
                                 self.__trace_particles_retained[time] += 1
-                            if time == 0:
-                                grid.putpixel(pos, (0,))
-                            else:
-                                grid.putpixel(pos, (random.randint(20, 70),))
+                            retgrid[i, j] += 1
                             if is_hydrogen:
                                 qto = self.qualify_to(to[i, j])
                                 if qto == 'HIGH':
+                                    self.__logrid[i, j] += 1
                                     self.lunar_oxygen(time)
                     particles -= 1
         print("Num particles = ", num_particles)
 
     def hydrogen_implantation(self, time, numh):
-        self.__hydrogen_particles_retained[time] = 0
-        self.__hydrogen_particles_reflected[time] = 0
         self.__lunar_oxygen[time] = 0
         if numh > 0:
-            self.hydrotrace_implantation(time, self.__hgrid, numh)
+            self.hydrotrace_implantation(time, self.__hrefgrid, self.__hretgrid, numh)
 
     def heavy_trace_implantation(self, time, numtrace):
-        self.__trace_particles_retained[time] = 0
-        self.__trace_particles_reflected[time] = 0
         if numtrace > 0:
-            self.hydrotrace_implantation(time, self.__tgrid, numtrace, False)
+            self.hydrotrace_implantation(time, self.__trefgrid, self.__tretgrid, numtrace, False)
 
     def helium_implantation(self, time, numhe):
-        self.__helium_particles_retained[time] = 0
-        self.__helium_particles_reflected[time] = 0
         if numhe > 0:
-            ae = self.__activation_energy
+            omat = self.__omat
             to = self.__titanium_oxide
             swf = self.__solar_wind_flux
-            cols, rows = np.shape(ae)
+            rows, cols = np.shape(omat)
             for i in range(rows):
                 for j in range(cols):
                     particles = numhe
                     while particles:
-                        qae = self.qualify_activation_energy(ae[i,j])
-                        qto = self.qualify_to(to[i,j])
-                        qswf = self.qualify_swf(swf[time%24])
-                        if qae == 'HIGH' and qto == 'HIGH' and qswf == 'HIGH':
+                        qomat = self.qualify_omat(omat[i, j])
+                        qto = self.qualify_to(to[i, j])
+                        qswf = self.qualify_swf(swf[0, time[1]])
+                        if qomat == 'HIGH' and qto == 'HIGH' and qswf == 'HIGH':
                             self.__helium_particles_retained[time] += 1
-                            self.__heliumgrid.putpixel((j,i), (random.randint(0, 50),))
+                            self.__heliumretgrid[i, j] += 1
                         else:
                             self.__helium_particles_reflected[time] += 1
-                            self.__heliumgrid.putpixel((j, i), (random.randint(200, 255),))
+                            self.__heliumrefgrid[i, j] += 1
                         particles -= 1
             print("He = ", numhe)
 
@@ -221,27 +230,84 @@ class SurfaceImplantation():
         self.show_retain_plots(time)
         self.show_oxygen_plot(time)
 
+    def daily_particles(self, time_dict):
+        daily_dict = defaultdict(lambda: 0)
+        for k in time_dict.keys():
+            daily_dict[k[0]] += time_dict[k]
+        return daily_dict
+
+    def write_to_file(self):
+        dicts = [self.__lunar_oxygen, self.__hydrogen_particles_reflected, self.__hydrogen_particles_retained,
+                 self.__helium_particles_reflected, self.__helium_particles_retained, self.__trace_particles_reflected, self.__trace_particles_retained]
+        file_names = ['lo', 'href', 'hret', 'heref', 'heret', 'tref', 'tret']
+        for index, dict in enumerate(dicts):
+            fp = open('Hourly_' + file_names[index] + '.csv', 'w')
+            for k in dict.keys():
+                fp.write(str(k[0]) + "," + str(k[1]) + "," + str(dict[k]) + "\n")
+            fp.close()
+
+        for index, dict in enumerate(dicts):
+            fp = open('Daily_' + file_names[index] + '.csv', 'w')
+            dict = self.daily_particles(dict)
+            for k in dict.keys():
+                fp.write(str(k) + "," + str(dict[k]) + "\n")
+            fp.close()
+
+    def get_solar_blackout_days(self, cme_day):
+        while True:
+            d = round((np.random.random() * 100)) % (self.__days - 5)
+            d = range(d, d+5)
+            if cme_day not in d and cme_day + 1 not in d:
+                return d
+
+    def init_dicts(self, time):
+        dicts = [self.__lunar_oxygen, self.__hydrogen_particles_reflected, self.__hydrogen_particles_retained,
+                 self.__helium_particles_reflected, self.__helium_particles_retained, self.__trace_particles_reflected,
+                 self.__trace_particles_retained]
+        for dict in dicts:
+            dict[time] = 0
+
+    def grid_to_image(self):
+        grids = [self.__logrid, self.__hrefgrid, self.__hretgrid, self.__heliumrefgrid, self.__heliumretgrid, self.__trefgrid, self.__tretgrid]
+        file_names = ["Lunar.png", "Href.png", "Hret.png", "Heliumref.png", "Heliumret.png", "Tref.png", "Tret.png"]
+        for index, grid in enumerate(grids):
+            #print(file_names[index] + ": ",  grid)
+            sm.mat_to_image(grid, file_names[index])
+
     def run_simulation(self):
-        time = range(self.__running_time)
+        days = range(self.__days)
         threads = []
-        for t in time:
-            numh, numhe, numtrace = self.get_particle_proportions(t%24)
-            print(numh, numhe, numtrace)
-            thread1 = Thread(target = self.hydrogen_implantation, args = (t, numh))
-            thread2 = Thread(target = self.heavy_trace_implantation, args = (t, numtrace))
-            thread3 = Thread(target = self.helium_implantation, args = (t, numhe))
-            threads.append(thread1)
-            threads.append(thread2)
-            threads.append(thread3)
-            thread1.start()
-            thread2.start()
-            thread3.start()
+        cme_day = round((np.random.random() * 100)) % self.__days
+        solar_blackout = self.get_solar_blackout_days(cme_day)
+        for d in days:
+            self.__cme = False
+            if d == cme_day or d == cme_day + 1:
+                self.__cme = True
+            for t in range(24):
+                self.init_dicts((d,t))
+                if d in solar_blackout:
+                    self.lunar_oxygen((d,t), True)
+                else:
+                    numh, numhe, numtrace = self.get_particle_proportions(t)
+                    print(numh, numhe, numtrace)
+                    thread1 = Thread(target = self.hydrogen_implantation, args = ((d, t), numh))
+                    thread2 = Thread(target = self.heavy_trace_implantation, args = ((d, t), numtrace))
+                    thread3 = Thread(target = self.helium_implantation, args = ((d, t), numhe))
+                    threads.append(thread1)
+                    threads.append(thread2)
+                    threads.append(thread3)
+                    thread1.start()
+                    thread2.start()
+                    thread3.start()
 
         for t in threads:
             t.join()
 
-        self.__hgrid.save('Hydrogen.png')
-        self.__heliumgrid.save('Helium.png')
-        self.__tgrid.save('Trace.png')
+        self.grid_to_image()
+        self.write_to_file()
+        #self.show_plots(days)
+        print('\nHydrogen Retained High OMAT: ', self.__hydrogen_ret_high)
+        print('\nHydrogen Retained Medium OMAT Night Side: ', self.__hydrogen_ret_med)
 
-        self.show_plots(time)
+        print('\nHydrogen Reflected Low OMAT: ', self.__hydrogen_ref_low)
+        print('\nHydrogen Reflected Medium OMAT Day Side: ', self.__hydrogen_ref_med)
