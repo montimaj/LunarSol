@@ -126,11 +126,10 @@ class SurfaceImplantation():
         if numtrace > 0:
             self.hydrotrace_implantation(time, self.__trefgrid, self.__tretgrid, numtrace, False)
 
-    def helium_implantation(self, time, numhe):
+    def helium_implantation(self, time, swf, numhe):
         if numhe > 0:
             omat = self.__omat
             to = self.__titanium_oxide
-            swf = self.__solar_wind_flux
             rows, cols = np.shape(omat)
             swfmean = np.mean(swf)
             for i in range(rows):
@@ -173,8 +172,8 @@ class SurfaceImplantation():
                 numhe[time] = round(numhe[time]/100. * total_particles)
             numtrace[time] = round(total_particles - numh[time] - numhe[time])
         swf = np.matrix(list(swf.values()))
-        self.__solar_wind_flux = swf/np.max(swf)
-        return numh, numhe, numtrace
+        swf = swf/np.max(swf)
+        return numh, numhe, numtrace, swf
 
     def daily_particles(self, time_dict):
         daily_dict = defaultdict(lambda: 0)
@@ -228,7 +227,7 @@ class SurfaceImplantation():
             self.__cme = False
             if d == cme_day or d == cme_day + 1:
                 self.__cme = True
-            numh, numhe, numtrace = self.get_particle_proportions()
+            numh, numhe, numtrace, swf = self.get_particle_proportions()
             for t in range(24):
                 self.init_dicts((d,t))
                 if d in solar_blackout:
@@ -238,17 +237,17 @@ class SurfaceImplantation():
                     print("Hydrogen =", numh[t], "Helium =", numhe[t], "Trace =", numtrace[t])
                     thread1 = Thread(target = self.hydrogen_implantation, args = ((d, t), numh[t]))
                     thread2 = Thread(target = self.heavy_trace_implantation, args = ((d, t), numtrace[t]))
-                    thread3 = Thread(target = self.helium_implantation, args = ((d, t), numhe[t]))
+                    thread3 = Thread(target = self.helium_implantation, args = ((d, t), swf, numhe[t]))
                     threads.append(thread1)
                     threads.append(thread2)
                     threads.append(thread3)
                     thread1.start()
                     thread2.start()
                     thread3.start()
-                    if len(threads) == cpu_count():
-                        for t in threads:
-                            t.join()
-                        threads.clear()
+
+            for t in threads:
+                t.join()
+
         self.grid_to_image()
         self.write_to_file()
 
