@@ -72,7 +72,7 @@ class SurfaceImplantation():
         for i in range(rows):
             for j in range(cols):
                 particles = num_particles
-                while particles:
+                while particles > 0:
                     qomat = self.qualify_omat(omat[i, j])
                     if qomat == 'LOW':
                         if is_hydrogen:
@@ -135,7 +135,7 @@ class SurfaceImplantation():
             for i in range(rows):
                 for j in range(cols):
                     particles = numhe
-                    while particles:
+                    while particles > 0:
                         qomat = self.qualify_omat(omat[i, j])
                         qto = self.qualify_to(to[i, j])
                         qswf = self.qualify_swf(swf[0, time[1]], swfmean)
@@ -148,13 +148,12 @@ class SurfaceImplantation():
                         particles -= 1
             print("He = ", numhe)
 
-    def get_particle_proportions(self):
+    def get_particle_proportions(self, cme):
         numh = {}
         numhe = {}
         numtrace = {}
         swf = {}
         for time in range(24):
-            cme = self.__cme
             total_particles = sm.get_total_particles(time, cme)
             velocity = sm.get_velocity(cme)
             swf[time] = sm.get_solar_flux(total_particles, velocity, time)
@@ -224,10 +223,10 @@ class SurfaceImplantation():
         cme_day = round((np.random.random() * 100)) % self.__days
         solar_blackout = self.get_solar_blackout_days(cme_day)
         for d in days:
-            self.__cme = False
+            cme = False
             if d == cme_day or d == cme_day + 1:
-                self.__cme = True
-            numh, numhe, numtrace, swf = self.get_particle_proportions()
+                cme = True
+            numh, numhe, numtrace, swf = self.get_particle_proportions(cme)
             for t in range(24):
                 self.init_dicts((d,t))
                 if d in solar_blackout:
@@ -245,8 +244,9 @@ class SurfaceImplantation():
                     thread2.start()
                     thread3.start()
 
-            for t in threads:
-                t.join()
+
+        for t in threads:
+            t.join()
 
         self.grid_to_image()
         self.write_to_file()
