@@ -3,6 +3,7 @@ import random
 from Imports import surfacemapper as sm
 from threading import Thread
 from collections import defaultdict
+from multiprocessing import cpu_count
 
 class SurfaceImplantation():
 
@@ -232,7 +233,9 @@ class SurfaceImplantation():
                 self.init_dicts((d,t))
                 if d in solar_blackout:
                     self.lunar_oxygen((d,t), True)
+                    print("Blackout")
                 else:
+                    print("Hydrogen =", numh[t], "Helium =", numhe[t], "Trace =", numtrace[t])
                     thread1 = Thread(target = self.hydrogen_implantation, args = ((d, t), numh[t]))
                     thread2 = Thread(target = self.heavy_trace_implantation, args = ((d, t), numtrace[t]))
                     thread3 = Thread(target = self.helium_implantation, args = ((d, t), numhe[t]))
@@ -242,10 +245,10 @@ class SurfaceImplantation():
                     thread1.start()
                     thread2.start()
                     thread3.start()
-
-        for t in threads:
-            t.join()
-
+                    if len(threads) == cpu_count():
+                        for t in threads:
+                            t.join()
+                        threads.clear()
         self.grid_to_image()
         self.write_to_file()
 
