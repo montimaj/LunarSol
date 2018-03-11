@@ -1,5 +1,5 @@
 import math
-from PIL import Image
+from osgeo import gdal
 import numpy as np
 
 def is_day(time):
@@ -31,14 +31,15 @@ def get_velocity(cme):
 def get_solar_flux(nsw, vsw, time):
     return nsw*vsw*math.cos(get_theta(time))
 
-def mat_to_image(mat, imgname):
-    rows, cols = np.shape(mat)
-    outimg = Image.new('L', (cols, rows))
-    for i in range(rows):
-        for j in range(cols):
-            val = int((mat[i, j] / np.max(mat)) * 255)
-            outimg.putpixel((j,i), (val,))
-    outimg.save(imgname)
+def save_img_16(arr_out, outfile):
+    cols, rows = arr_out.shape
+    outfile += '.tiff'
+    arr_out = arr_out/np.max(arr_out) * 255
+    arr_out = np.round(arr_out).astype(np.int)
+    driver = gdal.GetDriverByName("GTiff")
+    outdata = driver.Create(outfile, rows, cols, 1, gdal.GDT_Byte)
+    outdata.GetRasterBand(1).WriteArray(arr_out)
+    outdata.FlushCache()
 
 def generate_omat_grid(size, mean, sd):
     mat = []
@@ -46,7 +47,7 @@ def generate_omat_grid(size, mean, sd):
         omat = np.random.normal(mean, sd, size[1])
         mat.append(omat)
     mat = np.matrix(mat)
-    mat_to_image(mat, 'OMAT.png')
+    save_img_16(np.array(mat), 'OMAT')
     return mat
 
 def generate_to_grid(size, mean, sd):
@@ -55,7 +56,7 @@ def generate_to_grid(size, mean, sd):
         to = np.random.normal(mean, sd, size[1])
         mat.append(to)
     mat = np.matrix(mat)
-    mat_to_image(mat, 'TiO2.png')
+    save_img_16(np.array(mat), 'TiO2')
     return mat
 
 MIN_PARTICLES = int(4E+6)

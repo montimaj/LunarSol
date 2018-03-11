@@ -214,9 +214,9 @@ class SurfaceImplantation():
 
     def grid_to_image(self):
         grids = [self.__logrid, self.__hrefgrid, self.__hretgrid, self.__heliumrefgrid, self.__heliumretgrid, self.__trefgrid, self.__tretgrid]
-        file_names = ["Lunar.png", "Href.png", "Hret.png", "Heliumref.png", "Heliumret.png", "Tref.png", "Tret.png"]
+        file_names = ["Lunar", "Href", "Hret", "Heliumref", "Heliumret", "Tref", "Tret"]
         for index, grid in enumerate(grids):
-            sm.mat_to_image(grid, file_names[index])
+            sm.save_img_16(np.array(grid), file_names[index])
 
     def run_simulation(self):
         days = range(self.__days)
