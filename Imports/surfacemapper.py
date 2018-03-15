@@ -34,8 +34,10 @@ def get_solar_flux(nsw, vsw, time):
 def save_img_16(arr_out, outfile):
     cols, rows = arr_out.shape
     outfile += '.tiff'
-    arr_out = arr_out/np.max(arr_out) * 255
-    arr_out = np.round(arr_out).astype(np.int)
+    max_val = np.max(arr_out)
+    if max_val != 0:
+        arr_out = arr_out/np.max(arr_out) * 255
+        arr_out = np.round(arr_out).astype(np.int)
     driver = gdal.GetDriverByName("GTiff")
     outdata = driver.Create(outfile, rows, cols, 1, gdal.GDT_Byte)
     outdata.GetRasterBand(1).WriteArray(arr_out)
