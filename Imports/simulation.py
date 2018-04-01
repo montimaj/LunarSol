@@ -24,15 +24,15 @@ class SurfaceImplantation():
         self.__hydrogen_particles_retained = {}
         self.__helium_particles_retained = {}
         self.__trace_particles_retained = {}
-        self.__hydrogen_ref_low = np.float64(0)
-        self.__hydrogen_ref_med = np.float64(0)
-        self.__hydrogen_ret_high = np.float64(0)
-        self.__hydrogen_ret_med = np.float64(0)
+        self.__hydrogen_ref_low = np.uint64(0)
+        self.__hydrogen_ref_med = np.uint64(0)
+        self.__hydrogen_ret_high = np.uint64(0)
+        self.__hydrogen_ret_med = np.uint64(0)
 
     def generate_empty_matrix(self, size):
         mat = []
         for i in range(size[0]):
-            mat.append([np.float64(0)] * size[1])
+            mat.append([np.uint64(0)] * size[1])
         return np.matrix(mat)
 
     def qualify_omat(self, omat):
@@ -67,7 +67,7 @@ class SurfaceImplantation():
     def get_grid_particles(self, num_particles):
         bias = np.random.random() % (np.random.randint(10, 16) / 100.)
         bias = round(bias * num_particles)
-        return np.random.randint(num_particles - bias, num_particles + bias + 1)
+        return np.random.randint(num_particles - bias, num_particles + bias + 1, dtype = np.uint64)
 
     def hydrotrace_implantation(self, time, refgrid, retgrid, num_particles, is_hydrogen = True):
         omat = self.__omat
@@ -205,7 +205,7 @@ class SurfaceImplantation():
             d = range(d, d+5)
             if cme_day not in d and cme_day + 1 not in d:
                 return d
-            print("Trying blackout....")
+            print("Finding blackout days....")
 
 
     def init_dicts(self, time):
