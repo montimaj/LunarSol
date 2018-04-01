@@ -31,15 +31,16 @@ def get_velocity(cme):
 def get_solar_flux(nsw, vsw, time):
     return nsw*vsw*math.cos(get_theta(time))
 
-def save_img_16(arr_out, outfile):
+def mat_to_image(arr_out, outfile):
     cols, rows = arr_out.shape
-    outfile += '.tiff'
     max_val = np.max(arr_out)
+    np.savetxt(outfile + "_table.csv", arr_out)
     if max_val != 0:
-        arr_out = arr_out/np.max(arr_out) * 255
-        arr_out = np.round(arr_out).astype(np.int)
+        arr_out = arr_out/np.max(arr_out)
+    np.savetxt(outfile + "_norm_table.csv", arr_out)
     driver = gdal.GetDriverByName("GTiff")
-    outdata = driver.Create(outfile, rows, cols, 1, gdal.GDT_Byte)
+    outfile += '.tiff'
+    outdata = driver.Create(outfile, rows, cols, 1, gdal.GDT_Float32)
     outdata.GetRasterBand(1).WriteArray(arr_out)
     outdata.FlushCache()
 
@@ -49,7 +50,7 @@ def generate_omat_grid(size, mean, sd):
         omat = np.random.normal(mean, sd, size[1])
         mat.append(omat)
     mat = np.matrix(mat)
-    save_img_16(np.array(mat), 'OMAT')
+    mat_to_image(np.array(mat), 'OMAT')
     return mat
 
 def generate_to_grid(size, mean, sd):
@@ -58,7 +59,7 @@ def generate_to_grid(size, mean, sd):
         to = np.random.normal(mean, sd, size[1])
         mat.append(to)
     mat = np.matrix(mat)
-    save_img_16(np.array(mat), 'TiO2')
+    mat_to_image(np.array(mat), 'TiO2')
     return mat
 
 MIN_PARTICLES = int(4E+6)

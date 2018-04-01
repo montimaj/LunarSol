@@ -1,5 +1,4 @@
 import numpy as np
-import random
 from Imports import surfacemapper as sm
 from threading import Thread
 from collections import defaultdict
@@ -25,15 +24,15 @@ class SurfaceImplantation():
         self.__hydrogen_particles_retained = {}
         self.__helium_particles_retained = {}
         self.__trace_particles_retained = {}
-        self.__hydrogen_ref_low = 0
-        self.__hydrogen_ref_med = 0
-        self.__hydrogen_ret_high = 0
-        self.__hydrogen_ret_med = 0
+        self.__hydrogen_ref_low = np.float64(0)
+        self.__hydrogen_ref_med = np.float64(0)
+        self.__hydrogen_ret_high = np.float64(0)
+        self.__hydrogen_ret_med = np.float64(0)
 
     def generate_empty_matrix(self, size):
         mat = []
         for i in range(size[0]):
-            mat.append([0] * size[1])
+            mat.append([np.float64(0)] * size[1])
         return np.matrix(mat)
 
     def qualify_omat(self, omat):
@@ -60,10 +59,15 @@ class SurfaceImplantation():
 
     def lunar_oxygen(self, time, num_particles = 0, solar_blackout = False):
         if solar_blackout:
-            self.__lunar_oxygen[time] = np.random.randint(200, 500)
+            self.__lunar_oxygen[time] = np.random.randint(int(2.6E+4), int(3E+4))
         else:
             self.__hydrogen_particles_retained[time] -= num_particles
             self.__lunar_oxygen[time] += num_particles
+
+    def get_grid_particles(self, num_particles):
+        bias = np.random.random() % (np.random.randint(10, 16) / 100.)
+        bias = round(bias * num_particles)
+        return np.random.randint(num_particles - bias, num_particles + bias + 1)
 
     def hydrotrace_implantation(self, time, refgrid, retgrid, num_particles, is_hydrogen = True):
         omat = self.__omat
@@ -71,6 +75,7 @@ class SurfaceImplantation():
         rows, cols = np.shape(omat)
         for i in range(rows):
             for j in range(cols):
+                num_particles = self.get_grid_particles(num_particles)
                 qomat = self.qualify_omat(omat[i, j])
                 if qomat == 'LOW':
                     if is_hydrogen:
@@ -133,6 +138,7 @@ class SurfaceImplantation():
             swfmean = np.mean(swf)
             for i in range(rows):
                 for j in range(cols):
+                    numhe = self.get_grid_particles(numhe)
                     qomat = self.qualify_omat(omat[i, j])
                     qto = self.qualify_to(to[i, j])
                     qswf = self.qualify_swf(swf[0, time[1]], swfmean)
@@ -155,13 +161,13 @@ class SurfaceImplantation():
             swf[time] = sm.get_solar_flux(total_particles, velocity, time)
             if not cme:
                 numh[time] = round(0.95 * total_particles)
-                numhe[time] = (random.random() * 100) % 4
+                numhe[time] = (np.random.random() * 100) % 4
                 if numhe[time] < 2:
                     numhe[time] += 2.
                 numhe[time] = round(numhe[time]/100. * total_particles)
             else:
                 numh[time] = round(0.8 * total_particles)
-                numhe[time] = (random.random() * 100) % random.randint(10, 20)
+                numhe[time] = (np.random.random() * 100) % np.random.randint(10, 20)
                 if numhe[time] < 10:
                     numhe[time] += 10.
                 numhe[time] = round(numhe[time]/100. * total_particles)
@@ -199,6 +205,7 @@ class SurfaceImplantation():
             d = range(d, d+5)
             if cme_day not in d and cme_day + 1 not in d:
                 return d
+            print("Trying blackout....")
 
 
     def init_dicts(self, time):
@@ -212,45 +219,48 @@ class SurfaceImplantation():
         grids = [self.__logrid, self.__hrefgrid, self.__hretgrid, self.__heliumrefgrid, self.__heliumretgrid, self.__trefgrid, self.__tretgrid]
         file_names = ["Lunar", "Href", "Hret", "Heliumref", "Heliumret", "Tref", "Tret"]
         for index, grid in enumerate(grids):
-            sm.save_img_16(np.array(grid), file_names[index])
+            sm.mat_to_image(np.array(grid), file_names[index])
 
     def run_simulation(self):
-        days = range(self.__days)
-        threads = []
-        cme_day = round((np.random.random() * 100)) % self.__days
-        solar_blackout = self.get_solar_blackout_days(cme_day)
-        for d in days:
-            cme = False
-            if d == cme_day or d == cme_day + 1:
-                cme = True
-            numh, numhe, numtrace, swf = self.get_particle_proportions(cme)
-            for t in range(24):
-                self.init_dicts((d,t))
-                if d in solar_blackout:
-                    self.lunar_oxygen((d,t), solar_blackout = True)
-                    print("Blackout")
-                else:
-                    print("(D, T) =", (d,t), "Hydrogen =", numh[t], "Helium =", numhe[t], "Trace =", numtrace[t])
-                    thread1 = Thread(target = self.hydrogen_implantation, args = ((d, t), numh[t]))
-                    thread2 = Thread(target = self.heavy_trace_implantation, args = ((d, t), numtrace[t]))
-                    thread3 = Thread(target = self.helium_implantation, args = ((d, t), swf, numhe[t]))
-                    threads.append(thread1)
-                    threads.append(thread2)
-                    threads.append(thread3)
-                    thread1.start()
-                    thread2.start()
-                    thread3.start()
-                    if len(threads) > cpu_count():
-                        for thread in threads:
-                            print("Waiting")
-                            thread.join()
-                        threads.clear()
+        if self.__days < 10:
+            print("Minimum days should not be less than 10!")
+        else:
+            days = range(self.__days)
+            threads = []
+            cme_day = round((np.random.random() * 100)) % self.__days
+            solar_blackout = self.get_solar_blackout_days(cme_day)
+            for d in days:
+                cme = False
+                if d == cme_day or d == cme_day + 1:
+                    cme = True
+                numh, numhe, numtrace, swf = self.get_particle_proportions(cme)
+                for t in range(24):
+                    self.init_dicts((d,t))
+                    if d in solar_blackout:
+                        self.lunar_oxygen((d,t), solar_blackout = True)
+                        print("Blackout")
+                    else:
+                        print("(D, T) =", (d,t), "Hydrogen =", numh[t], "Helium =", numhe[t], "Trace =", numtrace[t])
+                        thread1 = Thread(target = self.hydrogen_implantation, args = ((d, t), numh[t]))
+                        thread2 = Thread(target = self.heavy_trace_implantation, args = ((d, t), numtrace[t]))
+                        thread3 = Thread(target = self.helium_implantation, args = ((d, t), swf, numhe[t]))
+                        threads.append(thread1)
+                        threads.append(thread2)
+                        threads.append(thread3)
+                        thread1.start()
+                        thread2.start()
+                        thread3.start()
+                        if len(threads) > cpu_count():
+                            for thread in threads:
+                                print("Waiting")
+                                thread.join()
+                            threads.clear()
 
-        self.grid_to_image()
-        self.write_to_file()
+            self.grid_to_image()
+            self.write_to_file()
 
-        print('\nHydrogen Retained High OMAT: ', self.__hydrogen_ret_high)
-        print('\nHydrogen Retained Medium OMAT Night Side: ', self.__hydrogen_ret_med)
+            print('\nHydrogen Retained High OMAT: ', self.__hydrogen_ret_high)
+            print('\nHydrogen Retained Medium OMAT Night Side: ', self.__hydrogen_ret_med)
 
-        print('\nHydrogen Reflected Low OMAT: ', self.__hydrogen_ref_low)
-        print('\nHydrogen Reflected Medium OMAT Day Side: ', self.__hydrogen_ref_med)
+            print('\nHydrogen Reflected Low OMAT: ', self.__hydrogen_ref_low)
+            print('\nHydrogen Reflected Medium OMAT Day Side: ', self.__hydrogen_ref_med)
