@@ -251,8 +251,8 @@ class SurfaceImplantation():
                         thread2.start()
                         thread3.start()
                         if len(threads) > cpu_count():
+                            print("Waiting for threads to finish...")
                             for thread in threads:
-                                print("Waiting")
                                 thread.join()
                             threads.clear()
 

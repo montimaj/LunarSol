@@ -45,21 +45,25 @@ def mat_to_image(arr_out, outfile):
     outdata.FlushCache()
 
 def generate_omat_grid(size, mean, sd):
+    print("Generating OMAT Image...")
     mat = []
     for i in range(size[0]):
         omat = np.random.normal(mean, sd, size[1])
         mat.append(omat)
     mat = np.matrix(mat)
     mat_to_image(np.array(mat), 'OMAT')
+    print("OMAT Image generated!")
     return mat
 
 def generate_to_grid(size, mean, sd):
+    print("Generating TiO2 Image...")
     mat = []
     for i in range(size[0]):
         to = np.random.normal(mean, sd, size[1])
         mat.append(to)
     mat = np.matrix(mat)
     mat_to_image(np.array(mat), 'TiO2')
+    print("TiO2 Image generated!")
     return mat
 
 MIN_PARTICLES = int(4E+6)
