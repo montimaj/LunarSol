@@ -1,7 +1,0 @@
-Hydrogen Retained High OMAT:  366001590223119
-
-Hydrogen Retained Medium OMAT Night Side:  233004331670
-
-Hydrogen Reflected Low OMAT:  65900604696323
-
-Hydrogen Reflected Medium OMAT Day Side:  135635891000217
