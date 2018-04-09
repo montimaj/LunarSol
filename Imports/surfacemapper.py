@@ -1,6 +1,7 @@
 import math
 from osgeo import gdal
 import numpy as np
+import matplotlib.pyplot as plt
 
 def is_day(time):
     return time >= 6 and time <= 18
@@ -43,6 +44,14 @@ def mat_to_image(arr_out, outfile):
     outdata = driver.Create(outfile, rows, cols, 1, gdal.GDT_Float32)
     outdata.GetRasterBand(1).WriteArray(arr_out)
     outdata.FlushCache()
+
+def generate_graphs(particles):
+    time = sorted(list(particles.keys()))[6: 19]
+    val = []
+    for t in time:
+        val.append(particles[t])
+    plt.plot(time, val)
+    plt.show()
 
 def generate_omat_grid(size, mean, sd):
     print("Generating OMAT Image...")

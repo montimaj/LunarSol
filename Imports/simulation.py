@@ -155,8 +155,10 @@ class SurfaceImplantation():
         numhe = {}
         numtrace = {}
         swf = {}
+        particles = {}
         for time in range(24):
             total_particles = sm.get_total_particles(time, cme)
+            particles[time] = total_particles
             velocity = sm.get_velocity(cme)
             swf[time] = sm.get_solar_flux(total_particles, velocity, time)
             if not cme:
@@ -174,6 +176,7 @@ class SurfaceImplantation():
             numtrace[time] = round(total_particles - numh[time] - numhe[time])
         swf = np.matrix(list(swf.values()))
         swf = swf/np.max(swf)
+        sm.generate_graphs(particles)
         return numh, numhe, numtrace, swf
 
     def daily_particles(self, time_dict):
@@ -234,6 +237,7 @@ class SurfaceImplantation():
                 if d == cme_day or d == cme_day + 1:
                     cme = True
                 numh, numhe, numtrace, swf = self.get_particle_proportions(cme)
+                '''
                 for t in range(24):
                     self.init_dicts((d,t))
                     if d in solar_blackout:
@@ -264,3 +268,4 @@ class SurfaceImplantation():
 
             print('\nHydrogen Reflected Low OMAT: ', self.__hydrogen_ref_low)
             print('\nHydrogen Reflected Medium OMAT Day Side: ', self.__hydrogen_ref_med)
+            '''
